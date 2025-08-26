@@ -9,6 +9,7 @@ import android.content.Intent
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationCompat
 import com.netvor.MainActivity
 import com.netvor.R
@@ -38,7 +39,11 @@ class NetvorVpnService : VpnService() {
 	override fun onCreate() {
 		super.onCreate()
 		serviceScope = CoroutineScope(Dispatchers.IO + Job())
-		startForeground(1, buildNotification())
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+			startForeground(1, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+		} else {
+			startForeground(1, buildNotification())
+		}
 		xrayManager = XrayManager(applicationContext)
 		configRepository = ConfigRepository(applicationContext)
 	}

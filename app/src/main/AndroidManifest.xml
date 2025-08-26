@@ -3,6 +3,7 @@
 
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+	<uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
 	<application
 		android:label="Netvor"
@@ -23,7 +24,8 @@
 		<service
 			android:name=".vpn.NetvorVpnService"
 			android:permission="android.permission.BIND_VPN_SERVICE"
-			android:exported="false">
+			android:exported="false"
+			android:foregroundServiceType="dataSync">
 			<intent-filter>
 				<action android:name="android.net.VpnService" />
 			</intent-filter>
