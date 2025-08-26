@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import com.netvor.ui.theme.NetvorTheme
 import androidx.compose.ui.platform.LocalContext
 import com.netvor.vpn.NetvorVpnService
+import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
 
@@ -57,10 +58,10 @@ class MainActivity : ComponentActivity() {
 	private fun prepareAndStartVpn() {
 		val intent = VpnService.prepare(this)
 		if (intent != null) {
-			onVpnPermissionGranted = { startService(Intent(this, NetvorVpnService::class.java)) }
+			onVpnPermissionGranted = { ContextCompat.startForegroundService(this, Intent(this, NetvorVpnService::class.java)) }
 			vpnPermissionLauncher.launch(intent)
 		} else {
-			startService(Intent(this, NetvorVpnService::class.java))
+			ContextCompat.startForegroundService(this, Intent(this, NetvorVpnService::class.java))
 		}
 	}
 }

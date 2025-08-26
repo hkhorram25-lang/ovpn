@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import android.util.Log
 import com.netvor.config.ConfigRepository
 import com.netvor.xray.XrayManager
 
@@ -37,12 +38,18 @@ class NetvorVpnService : VpnService() {
 	}
 
 	override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-		// Basic TUN setup; Xray integration will use this fd
 		serviceScope?.launch {
-			setupTun()
-			val configFile = configRepository.writeDefaultConfigIfMissing()
-			vpnInterface?.let { fd ->
-				xrayProcess = xrayManager.runXray(fd, configFile)
+			try {
+				// Ensure xray exists before establishing TUN to avoid premature service crash
+				val cfg = configRepository.writeDefaultConfigIfMissing()
+				xrayManager.ensureXrayPresent()
+				setupTun()
+				vpnInterface?.let { fd ->
+					xrayProcess = xrayManager.runXray(fd, cfg)
+				}
+			} catch (t: Throwable) {
+				Log.e("NetvorVpnService", "start failed", t)
+				stopSelf()
 			}
 		}
 		return START_STICKY
