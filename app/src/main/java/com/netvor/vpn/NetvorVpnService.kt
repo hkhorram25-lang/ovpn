@@ -24,6 +24,7 @@ import com.netvor.xray.XrayManager
 import com.netvor.bus.AppBus
 import android.net.TrafficStats
 import kotlinx.coroutines.delay
+import com.netvor.tun.Tun2SocksManager
 
 class NetvorVpnService : VpnService() {
 
@@ -32,6 +33,7 @@ class NetvorVpnService : VpnService() {
 	private lateinit var xrayManager: XrayManager
 	private lateinit var configRepository: ConfigRepository
 	private var xrayProcess: Process? = null
+	private var tun2socksProcess: Process? = null
 	private var startRxBytes: Long = 0
 	private var startTxBytes: Long = 0
 	private var startTimeMs: Long = 0
@@ -68,6 +70,8 @@ class NetvorVpnService : VpnService() {
 						vpnInterface?.let { fd ->
 							xrayProcess = xrayManager.runXray(fd, cfg)
 							readXrayLogs(xrayProcess!!)
+							val t2s = Tun2SocksManager(applicationContext)
+							tun2socksProcess = t2s.run(fd, "127.0.0.1:10808")
 						}
 						startRxBytes = TrafficStats.getUidRxBytes(android.os.Process.myUid()).coerceAtLeast(0)
 						startTxBytes = TrafficStats.getUidTxBytes(android.os.Process.myUid()).coerceAtLeast(0)
@@ -117,6 +121,8 @@ class NetvorVpnService : VpnService() {
 	}
 
 	private fun stopVpn() {
+		try { tun2socksProcess?.destroy() } catch (_: Throwable) { }
+		tun2socksProcess = null
 		try { xrayProcess?.destroy() } catch (_: Throwable) { }
 		xrayProcess = null
 		try { vpnInterface?.close() } catch (_: Throwable) { }

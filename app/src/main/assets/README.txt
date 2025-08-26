@@ -5,3 +5,9 @@ Place Xray binaries here with these exact names:
 - xray-x86 (ELF executable for x86)
 
 Each file must be marked executable after being copied at runtime. The app will select the appropriate binary by ABI, copy to internal storage, and exec it.
+
+Also place tun2socks binaries:
+- tun2socks-arm64-v8a
+- tun2socks-armeabi-v7a
+- tun2socks-x86_64
+- tun2socks-x86
