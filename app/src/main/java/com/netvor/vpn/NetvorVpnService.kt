@@ -55,6 +55,7 @@ class NetvorVpnService : VpnService() {
 		builder.addAddress("10.10.0.2", 32)
 		builder.addDnsServer("1.1.1.1")
 		builder.addRoute("0.0.0.0", 0)
+		try { builder.addDisallowedApplication(packageName) } catch (_: Throwable) { }
 		vpnInterface = builder.establish()
 	}
 

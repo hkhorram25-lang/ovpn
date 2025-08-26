@@ -14,11 +14,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.netvor.ui.theme.NetvorTheme
+import androidx.compose.ui.platform.LocalContext
 import com.netvor.vpn.NetvorVpnService
 
 class MainActivity : ComponentActivity() {
@@ -66,6 +68,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun HomeScreen(onToggle: (Boolean) -> Unit) {
 	var connected by remember { mutableStateOf(false) }
+	var link by remember { mutableStateOf("") }
+	var saved by remember { mutableStateOf(false) }
+    val context = LocalContext.current.applicationContext
 	Column(
 		modifier = Modifier
 			.fillMaxSize()
@@ -74,6 +79,15 @@ private fun HomeScreen(onToggle: (Boolean) -> Unit) {
 		verticalArrangement = Arrangement.Center
 	) {
 		Text(text = "Netvor")
+		OutlinedTextField(value = link, onValueChange = { link = it; saved = false }, label = { Text("VLESS لینک") })
+		Button(onClick = {
+                val ok = try {
+                    com.netvor.config.ConfigRepository(context).saveVlessLink(link)
+                    true
+                } catch (_: Throwable) { false }
+                saved = ok
+		}, enabled = link.startsWith("vless://"), modifier = Modifier.padding(top = 12.dp)) { Text("ذخیره کانفیگ") }
+		if (saved) { Text("ذخیره شد", modifier = Modifier.padding(top = 8.dp)) }
 		Button(onClick = {
 			connected = !connected
 			onToggle(connected)
