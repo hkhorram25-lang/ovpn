@@ -8,6 +8,8 @@ import com.netvor.parser.VlessConfig
 class ConfigRepository(private val appContext: Context) {
 
 	private fun configDir(): File = File(appContext.filesDir, "config").apply { mkdirs() }
+    private fun configsRoot(): File = File(appContext.filesDir, "configs").apply { mkdirs() }
+    private fun activeMarker(): File = File(configDir(), "active.txt")
 
 	fun writeDefaultConfigIfMissing(): File {
 		val f = File(configDir(), "config.json")
@@ -32,10 +34,42 @@ class ConfigRepository(private val appContext: Context) {
 	fun saveVlessLink(link: String): File {
 		val cfg = VlessLinkParser.parse(link)
 		val conf = buildXrayConfig(cfg)
-		val f = File(configDir(), "config.json")
+		val name = cfgNameFromLink(link)
+		val f = File(configsRoot(), "$name.json")
 		f.writeText(conf)
-		return f
+		// mark as active by copying into config.json
+		val active = File(configDir(), "config.json")
+		active.writeText(conf)
+		activeMarker().writeText(name)
+		return active
 	}
+
+    fun listConfigs(): List<String> {
+        return configsRoot().listFiles { file -> file.isFile && file.name.endsWith(".json") }
+            ?.map { it.nameWithoutExtension }
+            ?.sorted()
+            ?: emptyList()
+    }
+
+    fun getActiveConfigName(): String? = activeMarker().takeIf { it.exists() }?.readText()?.trim().takeIf { !it.isNullOrBlank() }
+
+    fun activateConfig(name: String): File {
+        val src = File(configsRoot(), "$name.json")
+        require(src.exists()) { "Config not found" }
+        val dst = File(configDir(), "config.json")
+        dst.writeText(src.readText())
+        activeMarker().writeText(name)
+        return dst
+    }
+
+    fun deleteConfig(name: String) {
+        File(configsRoot(), "$name.json").delete()
+        val active = getActiveConfigName()
+        if (active == name) {
+            // clear active
+            activeMarker().delete()
+        }
+    }
 
 	private fun buildXrayConfig(cfg: VlessConfig): String {
 		val serverName = (cfg.sniList?.firstOrNull() ?: cfg.address)
@@ -80,5 +114,20 @@ class ConfigRepository(private val appContext: Context) {
 			append("}")
 		}
 	}
+
+    private fun cfgNameFromLink(link: String): String {
+        return try {
+            val idx = link.indexOf('#')
+            if (idx >= 0 && idx + 1 < link.length) {
+                val name = link.substring(idx + 1).trim()
+                if (name.isNotBlank()) return sanitize(name)
+            }
+            "config_${System.currentTimeMillis()}"
+        } catch (_: Throwable) { "config_${System.currentTimeMillis()}" }
+    }
+
+    private fun sanitize(name: String): String {
+        return name.replace(Regex("[^A-Za-z0-9_-]"), "_").take(40)
+    }
 }
 

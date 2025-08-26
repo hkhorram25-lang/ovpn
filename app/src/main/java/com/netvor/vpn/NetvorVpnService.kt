@@ -20,6 +20,9 @@ import kotlinx.coroutines.launch
 import android.util.Log
 import com.netvor.config.ConfigRepository
 import com.netvor.xray.XrayManager
+import com.netvor.bus.AppBus
+import android.net.TrafficStats
+import kotlinx.coroutines.delay
 
 class NetvorVpnService : VpnService() {
 
@@ -28,6 +31,9 @@ class NetvorVpnService : VpnService() {
 	private lateinit var xrayManager: XrayManager
 	private lateinit var configRepository: ConfigRepository
 	private var xrayProcess: Process? = null
+	private var startRxBytes: Long = 0
+	private var startTxBytes: Long = 0
+	private var startTimeMs: Long = 0
 
 	override fun onCreate() {
 		super.onCreate()
@@ -46,13 +52,40 @@ class NetvorVpnService : VpnService() {
 				setupTun()
 				vpnInterface?.let { fd ->
 					xrayProcess = xrayManager.runXray(fd, cfg)
+					readXrayLogs(xrayProcess!!)
 				}
+				startRxBytes = TrafficStats.getUidRxBytes(android.os.Process.myUid()).coerceAtLeast(0)
+				startTxBytes = TrafficStats.getUidTxBytes(android.os.Process.myUid()).coerceAtLeast(0)
+				startTimeMs = System.currentTimeMillis()
+				AppBus.updateStatus(AppBus.Status(true, startTimeMs, 0, 0))
+				serviceScope?.launch { updateStatsLoop() }
 			} catch (t: Throwable) {
 				Log.e("NetvorVpnService", "start failed", t)
 				stopSelf()
 			}
 		}
 		return START_STICKY
+	}
+
+	private fun readXrayLogs(p: Process) {
+		serviceScope?.launch {
+			try {
+				p.inputStream.bufferedReader().useLines { seq ->
+					seq.forEach { line -> AppBus.emitLog(line) }
+				}
+			} catch (_: Throwable) { }
+		}
+	}
+
+	private suspend fun updateStatsLoop() {
+		while (true) {
+			val rx = TrafficStats.getUidRxBytes(android.os.Process.myUid()).coerceAtLeast(0)
+			val tx = TrafficStats.getUidTxBytes(android.os.Process.myUid()).coerceAtLeast(0)
+			val drx = (rx - startRxBytes).coerceAtLeast(0)
+			val dtx = (tx - startTxBytes).coerceAtLeast(0)
+			AppBus.updateStatus(AppBus.Status(true, startTimeMs, drx, dtx))
+			delay(1000)
+		}
 	}
 
 	private fun setupTun() {
@@ -94,6 +127,7 @@ class NetvorVpnService : VpnService() {
 		vpnInterface = null
 		xrayProcess?.destroy()
 		xrayProcess = null
+		AppBus.updateStatus(AppBus.Status(false, 0, 0, 0))
 		super.onDestroy()
 	}
 }

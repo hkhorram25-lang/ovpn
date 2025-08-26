@@ -23,6 +23,8 @@ import com.netvor.ui.theme.NetvorTheme
 import androidx.compose.ui.platform.LocalContext
 import com.netvor.vpn.NetvorVpnService
 import androidx.core.content.ContextCompat
+import com.netvor.ui.NetvorTabs
+import com.netvor.config.ConfigRepository
 
 class MainActivity : ComponentActivity() {
 
@@ -41,14 +43,24 @@ class MainActivity : ComponentActivity() {
 		setContent {
 			NetvorTheme {
 				Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-					HomeScreen(
-						onToggle = { shouldConnect ->
+					val appCtx = applicationContext
+					val repo = remember { ConfigRepository(appCtx) }
+					var refresh by remember { mutableStateOf(0) }
+					NetvorTabs(
+						onConnectToggle = { shouldConnect ->
 							if (shouldConnect) {
 								prepareAndStartVpn()
 							} else {
 								stopService(Intent(this, NetvorVpnService::class.java))
 							}
-						}
+						},
+						onImport = { link ->
+							try { repo.saveVlessLink(link); refresh++ ; true } catch (_: Throwable) { false }
+						},
+						configs = remember(refresh) { repo.listConfigs() },
+						active = remember(refresh) { repo.getActiveConfigName() },
+						onActivate = { name -> repo.activateConfig(name); refresh++ },
+						onDelete = { name -> repo.deleteConfig(name); refresh++ }
 					)
 				}
 			}
@@ -62,38 +74,6 @@ class MainActivity : ComponentActivity() {
 			vpnPermissionLauncher.launch(intent)
 		} else {
 			ContextCompat.startForegroundService(this, Intent(this, NetvorVpnService::class.java))
-		}
-	}
-}
-
-@Composable
-private fun HomeScreen(onToggle: (Boolean) -> Unit) {
-	var connected by remember { mutableStateOf(false) }
-	var link by remember { mutableStateOf("") }
-	var saved by remember { mutableStateOf(false) }
-    val context = LocalContext.current.applicationContext
-	Column(
-		modifier = Modifier
-			.fillMaxSize()
-			.padding(24.dp),
-		horizontalAlignment = Alignment.CenterHorizontally,
-		verticalArrangement = Arrangement.Center
-	) {
-		Text(text = "Netvor")
-		OutlinedTextField(value = link, onValueChange = { link = it; saved = false }, label = { Text("VLESS لینک") })
-		Button(onClick = {
-                val ok = try {
-                    com.netvor.config.ConfigRepository(context).saveVlessLink(link)
-                    true
-                } catch (_: Throwable) { false }
-                saved = ok
-		}, enabled = link.startsWith("vless://"), modifier = Modifier.padding(top = 12.dp)) { Text("ذخیره کانفیگ") }
-		if (saved) { Text("ذخیره شد", modifier = Modifier.padding(top = 8.dp)) }
-		Button(onClick = {
-			connected = !connected
-			onToggle(connected)
-		}) {
-			Text(if (connected) "قطع اتصال" else "اتصال")
 		}
 	}
 }
