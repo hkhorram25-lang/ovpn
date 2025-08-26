@@ -19,11 +19,11 @@ bin/
 gen/
 out/
 
-# Gradle Wrapper
-gradle/wrapper/gradle-wrapper.jar
-gradle/wrapper/gradle-wrapper.properties
-gradlew
-gradlew.bat
+# Keep Gradle Wrapper files under version control
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+!gradlew
+!gradlew.bat
 
 # Keystore files
 *.jks
