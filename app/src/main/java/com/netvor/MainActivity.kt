@@ -70,10 +70,14 @@ class MainActivity : ComponentActivity() {
 	private fun prepareAndStartVpn() {
 		val intent = VpnService.prepare(this)
 		if (intent != null) {
-			onVpnPermissionGranted = { ContextCompat.startForegroundService(this, Intent(this, NetvorVpnService::class.java)) }
+			onVpnPermissionGranted = {
+				try { ContextCompat.startForegroundService(this, Intent(this, NetvorVpnService::class.java)) }
+				catch (t: Throwable) { com.netvor.bus.AppBus.emitLog("startForegroundService error: ${t.message}") }
+			}
 			vpnPermissionLauncher.launch(intent)
 		} else {
-			ContextCompat.startForegroundService(this, Intent(this, NetvorVpnService::class.java))
+			try { ContextCompat.startForegroundService(this, Intent(this, NetvorVpnService::class.java)) }
+			catch (t: Throwable) { com.netvor.bus.AppBus.emitLog("startForegroundService error: ${t.message}") }
 		}
 	}
 }

@@ -115,7 +115,7 @@ class NetvorVpnService : VpnService() {
 		return NotificationCompat.Builder(this, channelId)
 			.setContentTitle("Netvor")
 			.setContentText("در حال اجرا")
-			.setSmallIcon(R.drawable.ic_vpn_key)
+			.setSmallIcon(R.mipmap.ic_launcher)
 			.setContentIntent(pendingIntent)
 			.setOngoing(true)
 			.build()
