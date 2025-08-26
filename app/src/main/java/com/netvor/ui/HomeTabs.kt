@@ -57,7 +57,7 @@ fun NetvorTabs(
 @Composable
 private fun DashboardTab(onToggle: (Boolean) -> Unit) {
 	val status by AppBus.status.collectAsState()
-	var connected by remember { mutableStateOf(false) }
+	val connected = status.connected
 	val alphaAnim by animateFloatAsState(targetValue = if (connected) 1f else 0.9f, animationSpec = tween(900, easing = FastOutSlowInEasing), label = "titleAlpha")
 	Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
 		Text("Netvor", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), modifier = Modifier.alpha(alphaAnim))
@@ -67,7 +67,7 @@ private fun DashboardTab(onToggle: (Boolean) -> Unit) {
 		}
 		Text("زمان اجرا: ${uptimeText(status.startTimeMs)}")
 		Button(
-			onClick = { connected = !connected; onToggle(connected) },
+			onClick = { onToggle(!connected) },
 			modifier = Modifier
 				.clip(RoundedCornerShape(12.dp))
 				.background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)))

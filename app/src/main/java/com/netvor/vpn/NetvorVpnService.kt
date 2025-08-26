@@ -36,6 +36,11 @@ class NetvorVpnService : VpnService() {
 	private var startTxBytes: Long = 0
 	private var startTimeMs: Long = 0
 
+	companion object {
+		const val ACTION_START = "com.netvor.action.START"
+		const val ACTION_STOP = "com.netvor.action.STOP"
+	}
+
 	override fun onCreate() {
 		super.onCreate()
 		serviceScope = CoroutineScope(Dispatchers.IO + Job())
@@ -49,27 +54,34 @@ class NetvorVpnService : VpnService() {
 	}
 
 	override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-		serviceScope?.launch {
-			try {
-				// Ensure xray exists before establishing TUN to avoid premature service crash
-				val cfg = configRepository.writeDefaultConfigIfMissing()
-				xrayManager.ensureXrayPresent()
-				setupTun()
-				vpnInterface?.let { fd ->
-					xrayProcess = xrayManager.runXray(fd, cfg)
-					readXrayLogs(xrayProcess!!)
+		when (intent?.action) {
+			ACTION_STOP -> {
+				stopVpn()
+				return START_NOT_STICKY
+			}
+			else -> {
+				serviceScope?.launch {
+					try {
+						val cfg = configRepository.writeDefaultConfigIfMissing()
+						xrayManager.ensureXrayPresent()
+						setupTun()
+						vpnInterface?.let { fd ->
+							xrayProcess = xrayManager.runXray(fd, cfg)
+							readXrayLogs(xrayProcess!!)
+						}
+						startRxBytes = TrafficStats.getUidRxBytes(android.os.Process.myUid()).coerceAtLeast(0)
+						startTxBytes = TrafficStats.getUidTxBytes(android.os.Process.myUid()).coerceAtLeast(0)
+						startTimeMs = System.currentTimeMillis()
+						AppBus.updateStatus(AppBus.Status(true, startTimeMs, 0, 0))
+						serviceScope?.launch { updateStatsLoop() }
+					} catch (t: Throwable) {
+						Log.e("NetvorVpnService", "start failed", t)
+						stopVpn()
+					}
 				}
-				startRxBytes = TrafficStats.getUidRxBytes(android.os.Process.myUid()).coerceAtLeast(0)
-				startTxBytes = TrafficStats.getUidTxBytes(android.os.Process.myUid()).coerceAtLeast(0)
-				startTimeMs = System.currentTimeMillis()
-				AppBus.updateStatus(AppBus.Status(true, startTimeMs, 0, 0))
-				serviceScope?.launch { updateStatsLoop() }
-			} catch (t: Throwable) {
-				Log.e("NetvorVpnService", "start failed", t)
-				stopSelf()
+				return START_NOT_STICKY
 			}
 		}
-		return START_STICKY
 	}
 
 	private fun readXrayLogs(p: Process) {
@@ -102,6 +114,21 @@ class NetvorVpnService : VpnService() {
 		builder.addRoute("0.0.0.0", 0)
 		try { builder.addDisallowedApplication(packageName) } catch (_: Throwable) { }
 		vpnInterface = builder.establish()
+	}
+
+	private fun stopVpn() {
+		try { xrayProcess?.destroy() } catch (_: Throwable) { }
+		xrayProcess = null
+		try { vpnInterface?.close() } catch (_: Throwable) { }
+		vpnInterface = null
+		AppBus.updateStatus(AppBus.Status(false, 0, 0, 0))
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+			stopForeground(ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+		} else {
+			@Suppress("DEPRECATION")
+			stopForeground(true)
+		}
+		stopSelf()
 	}
 
 	private fun buildNotification(): Notification {

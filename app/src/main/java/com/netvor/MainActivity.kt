@@ -51,7 +51,8 @@ class MainActivity : ComponentActivity() {
 							if (shouldConnect) {
 								prepareAndStartVpn()
 							} else {
-								stopService(Intent(this, NetvorVpnService::class.java))
+								val stop = Intent(this, NetvorVpnService::class.java).apply { action = NetvorVpnService.ACTION_STOP }
+								ContextCompat.startForegroundService(this, stop)
 							}
 						},
 						onImport = { link ->
@@ -71,13 +72,17 @@ class MainActivity : ComponentActivity() {
 		val intent = VpnService.prepare(this)
 		if (intent != null) {
 			onVpnPermissionGranted = {
-				try { ContextCompat.startForegroundService(this, Intent(this, NetvorVpnService::class.java)) }
-				catch (t: Throwable) { com.netvor.bus.AppBus.emitLog("startForegroundService error: ${t.message}") }
+				try {
+					val start = Intent(this, NetvorVpnService::class.java).apply { action = NetvorVpnService.ACTION_START }
+					ContextCompat.startForegroundService(this, start)
+				} catch (t: Throwable) { com.netvor.bus.AppBus.emitLog("startForegroundService error: ${t.message}") }
 			}
 			vpnPermissionLauncher.launch(intent)
 		} else {
-			try { ContextCompat.startForegroundService(this, Intent(this, NetvorVpnService::class.java)) }
-			catch (t: Throwable) { com.netvor.bus.AppBus.emitLog("startForegroundService error: ${t.message}") }
+			try {
+				val start = Intent(this, NetvorVpnService::class.java).apply { action = NetvorVpnService.ACTION_START }
+				ContextCompat.startForegroundService(this, start)
+			} catch (t: Throwable) { com.netvor.bus.AppBus.emitLog("startForegroundService error: ${t.message}") }
 		}
 	}
 }
