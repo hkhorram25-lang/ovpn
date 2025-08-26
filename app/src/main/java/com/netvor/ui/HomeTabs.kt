@@ -9,6 +9,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.netvor.bus.AppBus
 import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 
 enum class TabItem(val title: String) { Dashboard("داشبورد"), Logs("لاگ"), Import("ایمپورت"), Manage("مدیریت"), About("درباره") }
 
@@ -22,7 +31,10 @@ fun NetvorTabs(
 	onDelete: (String) -> Unit,
 ) {
 	var current by remember { mutableStateOf(TabItem.Dashboard) }
-	Column(Modifier.fillMaxSize()) {
+	Column(
+		Modifier
+			.fillMaxSize()
+			.background(Brush.verticalGradient(listOf(Color(0xFF0E0E10), Color(0xFF1F2240))))) {
 		TabRow(selectedTabIndex = current.ordinal) {
 			TabItem.values().forEachIndexed { index, tab ->
 				Tab(
@@ -46,14 +58,22 @@ fun NetvorTabs(
 private fun DashboardTab(onToggle: (Boolean) -> Unit) {
 	val status by AppBus.status.collectAsState()
 	var connected by remember { mutableStateOf(false) }
+	val alphaAnim by animateFloatAsState(targetValue = if (connected) 1f else 0.9f, animationSpec = tween(900, easing = FastOutSlowInEasing), label = "titleAlpha")
 	Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-		Text("Netvor", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold))
+		Text("Netvor", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), modifier = Modifier.alpha(alphaAnim))
 		Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
 			StatBox("دانلود", humanBytes(status.rxBytes))
 			StatBox("آپلود", humanBytes(status.txBytes))
 		}
 		Text("زمان اجرا: ${uptimeText(status.startTimeMs)}")
-		Button(onClick = { connected = !connected; onToggle(connected) }) { Text(if (connected) "قطع اتصال" else "اتصال") }
+		Button(
+			onClick = { connected = !connected; onToggle(connected) },
+			modifier = Modifier
+				.clip(RoundedCornerShape(12.dp))
+				.background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)))
+		) {
+			Text(if (connected) "قطع اتصال" else "اتصال")
+		}
 	}
 }
 
