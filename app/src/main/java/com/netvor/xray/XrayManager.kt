@@ -7,10 +7,12 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import android.system.Os
+import android.system.OsConstants
 
 class XrayManager(private val appContext: Context) {
 
-	private fun binariesDir(): File = File(appContext.filesDir, "xray").apply { mkdirs() }
+	private fun binariesDir(): File = File(appContext.codeCacheDir, "xray").apply { mkdirs() }
 
 	private fun binaryFile(): File = File(binariesDir(), "xray")
 
@@ -19,7 +21,12 @@ class XrayManager(private val appContext: Context) {
 		if (!bin.exists()) {
 			copyFromAssets()
 		}
-		bin.setExecutable(true)
+		try {
+			Os.chmod(binariesDir().absolutePath, OsConstants.S_IRWXU)
+			Os.chmod(bin.absolutePath, OsConstants.S_IRWXU)
+		} catch (_: Throwable) {
+			bin.setExecutable(true)
+		}
 		bin
 	}
 

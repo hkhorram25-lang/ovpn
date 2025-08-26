@@ -18,6 +18,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import kotlinx.coroutines.delay
 
 enum class TabItem(val title: String) { Dashboard("داشبورد"), Logs("لاگ"), Import("ایمپورت"), Manage("مدیریت"), About("درباره") }
 
@@ -66,15 +71,45 @@ private fun DashboardTab(onToggle: (Boolean) -> Unit) {
 			StatBox("آپلود", humanBytes(status.txBytes))
 		}
 		Text("زمان اجرا: ${uptimeText(status.startTimeMs)}")
-		Button(
-			onClick = { onToggle(!connected) },
-			modifier = Modifier
-				.clip(RoundedCornerShape(12.dp))
-				.background(Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)))
-		) {
-			Text(if (connected) "قطع اتصال" else "اتصال")
-		}
+		PingBox()
+		CircularConnectButton(connected = connected, onToggle = { onToggle(!connected) })
 	}
+}
+
+@Composable
+private fun PingBox() {
+    var pingMs by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val start = System.currentTimeMillis()
+            try {
+                java.net.InetAddress.getByName("1.1.1.1").isReachable(1000)
+                pingMs = (System.currentTimeMillis() - start).toInt()
+            } catch (_: Throwable) { pingMs = null }
+            delay(3000)
+        }
+    }
+    Text("پینگ: ${pingMs?.let { "$it ms" } ?: "نامشخص"}")
+}
+
+@Composable
+private fun CircularConnectButton(connected: Boolean, onToggle: () -> Unit) {
+    val progress by animateFloatAsState(targetValue = if (connected) 1f else 0f, animationSpec = tween(600), label = "progress")
+    val secColor = MaterialTheme.colorScheme.secondary
+    val priColor = MaterialTheme.colorScheme.primary
+    Button(onClick = onToggle) {
+        Canvas(modifier = Modifier.size(64.dp)) {
+            drawArc(
+                color = secColor,
+                startAngle = -90f,
+                sweepAngle = 360f * progress,
+                useCenter = false,
+                style = Stroke(width = 10f, cap = StrokeCap.Round)
+            )
+            drawCircle(color = priColor, radius = size.minDimension / 4f, center = Offset(size.width/2, size.height/2))
+        }
+        Text(if (connected) "قطع" else "اتصال", modifier = Modifier.padding(start = 8.dp))
+    }
 }
 
 @Composable
