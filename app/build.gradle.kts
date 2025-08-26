@@ -17,9 +17,6 @@ android {
         versionName = "0.1.0"
 
         vectorDrawables.useSupportLibrary = true
-
-        buildConfigField("String", "XRAY_REPO", "\"XTLS/Xray-core\"")
-        buildConfigField("String", "XRAY_VERSION", "\"v25.7.26\"")
     }
 
     buildTypes {
