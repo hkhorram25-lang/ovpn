@@ -17,23 +17,33 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import com.netvor.config.ConfigRepository
+import com.netvor.xray.XrayManager
 
 class NetvorVpnService : VpnService() {
 
 	private var vpnInterface: ParcelFileDescriptor? = null
 	private var serviceScope: CoroutineScope? = null
+	private lateinit var xrayManager: XrayManager
+	private lateinit var configRepository: ConfigRepository
+	private var xrayProcess: Process? = null
 
 	override fun onCreate() {
 		super.onCreate()
 		serviceScope = CoroutineScope(Dispatchers.IO + Job())
 		startForeground(1, buildNotification())
+		xrayManager = XrayManager(applicationContext)
+		configRepository = ConfigRepository(applicationContext)
 	}
 
 	override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 		// Basic TUN setup; Xray integration will use this fd
 		serviceScope?.launch {
 			setupTun()
-			// TODO: Integrate Xray process execution with the tun fd
+			val configFile = configRepository.writeDefaultConfigIfMissing()
+			vpnInterface?.let { fd ->
+				xrayProcess = xrayManager.runXray(fd, configFile)
+			}
 		}
 		return START_STICKY
 	}
@@ -74,6 +84,8 @@ class NetvorVpnService : VpnService() {
 		serviceScope?.cancel()
 		vpnInterface?.close()
 		vpnInterface = null
+		xrayProcess?.destroy()
+		xrayProcess = null
 		super.onDestroy()
 	}
 }
