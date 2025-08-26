@@ -7,6 +7,8 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.sp
 
 private val DarkColors = darkColorScheme(
 	primary = Color(0xFF00E5FF),
@@ -24,11 +26,18 @@ private val LightColors = lightColorScheme(
 	onPrimary = Color(0xFFFFFFFF)
 )
 
-private val AppTypography = Typography()
+private val AppTypography = Typography(
+    displayLarge = TextStyle(fontSize = 28.sp),
+    headlineLarge = TextStyle(fontSize = 26.sp),
+    titleLarge = TextStyle(fontSize = 24.sp),
+    bodyLarge = TextStyle(fontSize = 18.sp),
+    bodyMedium = TextStyle(fontSize = 16.sp),
+    labelLarge = TextStyle(fontSize = 16.sp)
+)
 
 @Composable
 fun NetvorTheme(
-	darkTheme: Boolean = isSystemInDarkTheme(),
+	darkTheme: Boolean = false,
 	content: @Composable () -> Unit
 ) {
 	MaterialTheme(

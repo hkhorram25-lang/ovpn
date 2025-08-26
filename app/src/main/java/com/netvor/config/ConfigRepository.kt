@@ -37,6 +37,7 @@ class ConfigRepository(private val appContext: Context) {
 		val name = cfgNameFromLink(link)
 		val f = File(configsRoot(), "$name.json")
 		f.writeText(conf)
+		File(configsRoot(), "$name.link").writeText(link)
 		// mark as active by copying into config.json
 		val active = File(configDir(), "config.json")
 		active.writeText(conf)
@@ -64,6 +65,7 @@ class ConfigRepository(private val appContext: Context) {
 
     fun deleteConfig(name: String) {
         File(configsRoot(), "$name.json").delete()
+        File(configsRoot(), "$name.link").delete()
         val active = getActiveConfigName()
         if (active == name) {
             // clear active
